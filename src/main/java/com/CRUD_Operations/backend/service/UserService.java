@@ -1,0 +1,65 @@
+package com.CRUD_Operations.backend.service;
+
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import com.CRUD_Operations.backend.dto.request.CreateUserRequest;
+import com.CRUD_Operations.backend.dto.response.CreateUserResponse;
+import com.CRUD_Operations.backend.entity.User;
+import com.CRUD_Operations.backend.repository.UserRepository;
+
+@Service
+public class UserService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+
+    public User getUserById(UUID id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "user not fount with id =" + id));
+    }
+
+    public CreateUserResponse createUser(CreateUserRequest user) {
+
+        User newUser = User.builder().name(user.getName()).email(user.getEmail()).build();
+
+        User response = userRepository.save(newUser);
+
+        return CreateUserResponse.builder().id(response.getId()).name(user.getName()).email(user.getEmail())
+                .build();
+    }
+
+    public User updateUser(UUID id, User user) {
+
+        User userToUpdate = getUserById(id);
+
+        if (!user.getEmail().equalsIgnoreCase(userToUpdate.getEmail())) {
+            if (userRepository.existsByEmail(user.getEmail())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already exists");
+            }
+        }
+
+        userToUpdate.setName(user.getName());
+        userToUpdate.setEmail(user.getEmail());
+
+        return userRepository.save(userToUpdate);
+    }
+
+    public void deleteUser(UUID id) {
+        User user = getUserById(id);
+        userRepository.delete(user);
+    }
+
+    public boolean isEmailInUse(String email) {
+        return userRepository.existsByEmail(email);
+    }
+}
